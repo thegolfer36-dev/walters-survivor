@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/lock",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/scoreboard", 
+      "schedule": "*/10 * * * 1,4,5,6,7"
+    },
+    {
+      "path": "/api/cron/sweep",
+      "schedule": "0 8 * * 2"
+    }
+  ]
+}
