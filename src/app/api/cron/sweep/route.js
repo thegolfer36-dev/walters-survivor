@@ -1,4 +1,3 @@
- 
 import { createClient } from '@supabase/supabase-js';
 
 // Create admin client locally to avoid import issues on Vercel
@@ -85,4 +84,23 @@ export async function GET() {
       .from('member')
       .update({
         status: 'eliminated',
-        eliminated_week: la
+        eliminated_week: latestWeek,
+        eliminated_reason: 'No pick submitted'
+      })
+      .in('id', memberIds);
+    
+    if (error) {
+      console.error('Error eliminating members:', error);
+      return Response.json({ ok: false, error: error.message });
+    }
+    
+    return Response.json({ 
+      ok: true, 
+      message: `Eliminated ${memberIds.length} members for not picking in week ${latestWeek}`
+    });
+    
+  } catch (error) {
+    console.error('Sweep cron error:', error);
+    return Response.json({ ok: false, error: error.message });
+  }
+}

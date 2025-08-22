@@ -46,7 +46,6 @@ async function fetchWeekScoreboard(week) {
           } else if (awayScore > homeScore) {
             winnerTeam = awayTeam?.team?.abbreviation;
           }
-          // If tied, winnerTeam stays null
         }
         
         games.push({
@@ -155,4 +154,24 @@ async function processPicks(supabase, week, game) {
         
         // Eliminate members
         const memberIds = losingPicks.map(p => p.member_id);
-        await
+        await supabase
+          .from('member')
+          .update({ 
+            status: 'eliminated',
+            eliminated_week: week,
+            eliminated_reason: `Lost with ${losingTeam}`
+          })
+          .in('id', memberIds);
+      }
+    }
+  } catch (error) {
+    console.error('Error processing picks:', error);
+  }
+}
+
+function getCurrentWeek() {
+  const now = new Date();
+  const seasonStart = new Date('2025-09-04');
+  const weeksSinceStart = Math.floor((now - seasonStart) / (7 * 24 * 60 * 60 * 1000));
+  return Math.max(1, Math.min(18, weeksSinceStart + 1));
+}

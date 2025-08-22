@@ -91,3 +91,70 @@ export default function JoinPage() {
           }`}>
             {message}
           </div>
+        )}
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">First Name</label>
+            <input
+              type="text"
+              value={formData.firstName}
+              onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+              className="w-full border rounded px-3 py-2"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Last Name</label>
+            <input
+              type="text"
+              value={formData.lastName}
+              onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+              className="w-full border rounded px-3 py-2"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              className="w-full border rounded px-3 py-2"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Invite Code</label>
+            <input
+              type="text"
+              value={formData.inviteCode}
+              onChange={(e) => setFormData({...formData, inviteCode: e.target.value.toUpperCase()})}
+              placeholder="Enter 6-character code"
+              className="w-full border rounded px-3 py-2"
+              maxLength={6}
+              required
+            />
+          </div>
+          
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+          >
+            {loading ? 'Joining...' : 'Join League'}
+          </button>
+        </form>
+        
+        <div className="mt-6 text-center">
+          <a href="/" className="text-blue-500 hover:underline">
+            Back to Picks
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
