@@ -18,79 +18,138 @@ export default function HomePage() {
   const [usedTeams, setUsedTeams] = useState([]);
   const [member, setMember] = useState(null);
   const [league, setLeague] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadData();
   }, [currentWeek]);
 
+  // Get current member - in a real app this would be from authentication
+  async function getCurrentMember(leagueId) {
+    try {
+      // For now, get the first alive member in the league
+      // In a real app, this would be based on the logged-in user
+      const { data: members, error } = await supabase
+        .from('member')
+        .select('*')
+        .eq('league_id', leagueId)
+        .eq('status', 'alive')
+        .order('created_at')
+        .limit(1);
+      
+      if (error) {
+        console.error('Error fetching member:', error);
+        return null;
+      }
+      
+      return members?.[0] || null;
+    } catch (error) {
+      console.error('Error in getCurrentMember:', error);
+      return null;
+    }
+  }
+
   async function loadData() {
     try {
+      setLoading(true);
+      setError('');
+      
       // Get current league
-      const { data: leagues } = await supabase
+      const { data: leagues, error: leagueError } = await supabase
         .from('league')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1);
       
-      if (leagues && leagues.length > 0) {
-        setLeague(leagues[0]);
-        
-        // For demo, we'll use a mock member - in real app this would be from auth
-        const mockMember = {
-          id: '00000000-0000-0000-0000-000000000001',
-          email: 'demo@example.com',
-          first_name: 'Demo',
-          last_name: 'User'
-        };
-        setMember(mockMember);
-        
-        // Get games for current week
-        const { data: weekGames } = await supabase
-          .from('game')
-          .select('*')
-          .eq('nfl_week', currentWeek)
-          .order('start_time_utc');
-        
-        setGames(weekGames || []);
-        
-        // Get available teams (teams playing this week)
-        const teamsThisWeek = [...new Set([
-          ...weekGames?.map(g => g.home_team) || [],
-          ...weekGames?.map(g => g.away_team) || []
-        ])];
-        
-        // Get user's used teams
-        const { data: picks } = await supabase
-          .from('pick')
-          .select('team')
-          .eq('league_id', leagues[0].id)
-          .eq('member_id', mockMember.id);
-        
-        const used = picks?.map(p => p.team) || [];
-        setUsedTeams(used);
-        
-        // Filter available teams
-        const available = teamsThisWeek.filter(team => !used.includes(team));
-        setAvailableTeams(available);
-        
-        // Get current week pick
-        const { data: currentPick } = await supabase
-          .from('pick')
-          .select('*')
-          .eq('league_id', leagues[0].id)
-          .eq('member_id', mockMember.id)
-          .eq('nfl_week', currentWeek)
-          .single();
-        
-        setUserPick(currentPick);
+      if (leagueError) {
+        throw new Error('Error loading league: ' + leagueError.message);
       }
+      
+      if (!leagues || leagues.length === 0) {
+        setError('No league found. Please create a league first.');
+        setLoading(false);
+        return;
+      }
+      
+      const currentLeague = leagues[0];
+      setLeague(currentLeague);
+      
+      // Get current member
+      const currentMember = await getCurrentMember(currentLeague.id);
+      if (!currentMember) {
+        setError('No member found in this league. Please join the league first.');
+        setLoading(false);
+        return;
+      }
+      
+      setMember(currentMember);
+      
+      // Get games for current week
+      const { data: weekGames, error: gamesError } = await supabase
+        .from('game')
+        .select('*')
+        .eq('nfl_week', currentWeek)
+        .order('start_time_utc');
+      
+      if (gamesError) {
+        throw new Error('Error loading games: ' + gamesError.message);
+      }
+      
+      setGames(weekGames || []);
+      
+      // Get available teams (teams playing this week)
+      const teamsThisWeek = [...new Set([
+        ...weekGames?.map(g => g.home_team) || [],
+        ...weekGames?.map(g => g.away_team) || []
+      ])];
+      
+      // Get user's used teams
+      const { data: picks, error: picksError } = await supabase
+        .from('pick')
+        .select('team')
+        .eq('league_id', currentLeague.id)
+        .eq('member_id', currentMember.id);
+      
+      if (picksError) {
+        console.error('Error loading picks:', picksError);
+      }
+      
+      const used = picks?.map(p => p.team) || [];
+      setUsedTeams(used);
+      
+      // Filter available teams
+      const available = teamsThisWeek.filter(team => !used.includes(team));
+      setAvailableTeams(available);
+      
+      // Get current week pick
+      const { data: currentPick, error: currentPickError } = await supabase
+        .from('pick')
+        .select('*')
+        .eq('league_id', currentLeague.id)
+        .eq('member_id', currentMember.id)
+        .eq('nfl_week', currentWeek)
+        .single();
+      
+      if (currentPickError && currentPickError.code !== 'PGRST116') {
+        console.error('Error loading current pick:', currentPickError);
+      }
+      
+      setUserPick(currentPick || null);
+      
     } catch (error) {
       console.error('Error loading data:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
   }
 
   async function makePick(team) {
-    if (!league || !member) return;
+    if (!league || !member) {
+      alert('League or member not loaded');
+      return;
+    }
     
     try {
       const { error } = await supabase
@@ -102,12 +161,16 @@ export default function HomePage() {
           team: team
         });
       
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       
-      loadData(); // Refresh data
+      // Refresh data to show new pick
+      await loadData();
+      
     } catch (error) {
       console.error('Error making pick:', error);
-      alert('Error making pick');
+      alert('Error making pick: ' + error.message);
     }
   }
 
@@ -127,10 +190,46 @@ export default function HomePage() {
     });
   }
 
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-center">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-center text-red-600">{error}</div>
+          <div className="text-center mt-4">
+            <a href="/join" className="text-blue-500 hover:underline">
+              Join League
+            </a>
+            {' | '}
+            <a href="/admin" className="text-blue-500 hover:underline">
+              Admin Panel
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-2xl font-bold mb-4">Week {currentWeek} Picks</h2>
+        
+        {/* Member Info */}
+        {member && (
+          <div className="mb-4 text-sm text-gray-600">
+            Playing as: <strong>{member.first_name} {member.last_name}</strong> ({member.email})
+          </div>
+        )}
         
         {/* Week Selector */}
         <div className="mb-6">
@@ -207,6 +306,12 @@ export default function HomePage() {
               );
             })}
           </div>
+          
+          {availableTeams.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No available teams for Week {currentWeek}. Check if games are seeded for this week.
+            </div>
+          )}
         </div>
 
         {/* Used Teams */}
