@@ -26,29 +26,25 @@ export default function HomePage() {
 
   // Get current member - in a real app this would be from authentication
   async function getCurrentMember(leagueId) {
-    try {
-      // For now, get the first alive member in the league
-      // In a real app, this would be based on the logged-in user
-      const { data: members, error } = await supabase
-        .from('member')
-        .select('*')
-        .eq('league_id', leagueId)
-        .eq('status', 'alive')
-        .order('created_at')
-        .limit(1);
-      
-      if (error) {
-        console.error('Error fetching member:', error);
-        return null;
-      }
-      
-      return members?.[0] || null;
-    } catch (error) {
-      console.error('Error in getCurrentMember:', error);
+  try {
+    // Use your specific member ID for now
+    const { data: member, error } = await supabase
+      .from('member')
+      .select('*')
+      .eq('id', '8a19e01e-be94-418f-bf81-95a203f5d734')
+      .single();
+    
+    if (error) {
+      console.error('Error fetching member:', error);
       return null;
     }
+    
+    return member;
+  } catch (error) {
+    console.error('Error in getCurrentMember:', error);
+    return null;
   }
-
+}
   async function loadData() {
     try {
       setLoading(true);
