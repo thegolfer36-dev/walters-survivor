@@ -6,10 +6,9 @@ import { createClient } from '@supabase/supabase-js';
 import { getTeamInfo } from '../lib/teams';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  'https://fzgkvbeqesawooppzwr.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6Z2t2YmVxZWVzYXdvb3BwendyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NzcwMTksImV4cCI6MjA3MTE1MzAxOX0.KUuyDxmCHOn5B6zG_HIYNewHPqGIO0wBrqDUqcCgTPw'
 );
-
 export default function HomePage() {
   const [currentWeek, setCurrentWeek] = useState(1);
   const [games, setGames] = useState([]);
